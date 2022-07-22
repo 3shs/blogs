@@ -423,3 +423,85 @@ function parseText (
   type: 2
 }
 ```
+
+## 6. 解析 End Tag
+
+如匹配到闭合标签 随后将执行 `parseEndTag` 方法 从后向前循环（先解析的标签先推入栈里当然也会最后闭合） 然后调用 `parseHTML` 里 `optios` 上的 `end` 方法 然后通过 `stack.length -= 1` pop掉 `parse` 方法里的最新解析到的 ***AST*** 元素 最后调用 `closeElement` 方法 里面通过调用 `processElement` 方法 然后通过其里面的 `processKey`, `processRef`, `processSlotContent`, `processSlotOutlet`, `processComponent`, `processAttrs` 方法分别对元素进行 `key`, `Ref`, `slot`, `componnet(:is)`, `Attr` 进行处理 然后将处理好的 ***element*** 进行:
+
+```javascript
+currentParent.children.push(element)
+element.parent = currentParent
+```
+
+```javascript
+function parseEndTag (tagName, start, end) {
+  var pos, lowerCasedTagName;
+  if (start == null) { start = index; }
+  if (end == null) { end = index; }
+
+  // Find the closest opened tag of the same type
+  // 找到 该 标签 在 parseHTML stack 里的位置
+  if (tagName) {
+    lowerCasedTagName = tagName.toLowerCase();
+    for (pos = stack.length - 1; pos >= 0; pos--) {
+      if (stack[pos].lowerCasedTag === lowerCasedTagName) {
+        break
+      }
+    }
+  } else {
+    // If no tag name is provided, clean shop
+    pos = 0;
+  }
+
+  if (pos >= 0) {
+    // Close all the open elements, up the stack
+    for (var i = stack.length - 1; i >= pos; i--) {
+      if (i > pos || !tagName &&
+        options.warn
+      ) {
+        options.warn(
+          ("tag <" + (stack[i].tag) + "> has no matching end tag."),
+          { start: stack[i].start, end: stack[i].end }
+        );
+      }
+      if (options.end) {
+        // 调用 传进来的 options 上 end 方法
+        options.end(stack[i].tag, start, end);
+      }
+    }
+
+    // Remove the open elements from the stack
+    stack.length = pos;
+    lastTag = pos && stack[pos - 1].tag;
+  } else if (lowerCasedTagName === 'br') {
+    if (options.start) {
+      options.start(tagName, [], true, start, end);
+    }
+  } else if (lowerCasedTagName === 'p') {
+    if (options.start) {
+      options.start(tagName, [], false, start, end);
+    }
+    if (options.end) {
+      options.end(tagName, start, end);
+    }
+  }
+}
+
+// parse 里面 维护的 end 方法
+function end (tag, start, end$1) {
+  // 取出最新解析的元素
+  var element = stack[stack.length - 1];
+  // pop stack
+  stack.length -= 1;
+  // 意思是 拿到 最新解析的元素的 父元素 ast
+  currentParent = stack[stack.length - 1];
+  if (options.outputSourceRange) {
+    element.end = end$1;
+  }
+  // 这个方法是对这个元素进行 process 各种解析 最后完全解析好的元素 push到 currentParent 的 children里面 
+  // 然后 讲这个元素 parent 属性 设置成 currentParent
+  closeElement(element);
+},
+```
+
+最后也要将 `parseHTML` 的 `stack` 通过 `stack.length = pos` pop掉最新的解析标签
