@@ -228,7 +228,7 @@ Watcher.prototype.get = function get () {
 };
 ```
 
-随后首先调用 `updateComponent` 方法里的 `vm._render()` 方法 这个方法最主要的目的就是 调用 `render` 函数生成 `vnode` 也就是虚拟DOM
+随后首先调用 `updateComponent` 方法里的 `vm._render()` 方法 这个方法最主要的目的就是 调用之前利用模板解析生成的 `render` 函数生成 `vnode` 也就是虚拟DOM
 
 ```javascript
 Vue.prototype._render = function () {
@@ -257,7 +257,7 @@ Vue.prototype._render = function () {
     // separately from one another. Nested component's render fns are called
     // when parent component is patched.
     currentRenderingInstance = vm;
-    // 调用render函数 拿到 vnode
+    // 调用render函数 生成 vnode
     vnode = render.call(vm._renderProxy, vm.$createElement);
   } catch (e) {
     handleError(e, vm, "render");
@@ -297,3 +297,156 @@ Vue.prototype._render = function () {
   return vnode
 };
 ```
+
+之前通过模板解析生成的 `render` 函数 拼接了一系列在这个阶段需要的字符串方法 例如：
+
+1. `_c` 就是调用 Vue 上的 `createElement` 在其内部 调用 `_createElement` 方法 创建元素节点的 vnode
+
+```javascript
+function _createElement (
+  context,
+  tag,
+  data,
+  children,
+  normalizationType
+) {
+  // 如果有data 并且 data上有 __ob__ 属性 
+  // 说明这个 data 被 observed 过不能作为 vnode 的data属性
+  if (isDef(data) && isDef((data).__ob__)) {
+    warn(
+      "Avoid using observed data object as vnode data: " + (JSON.stringify(data)) + "\n" +
+      'Always create fresh vnode data objects in each render!',
+      context
+    );
+    return createEmptyVNode()
+  }
+  // object syntax in v-bind
+  // 将动态组件的 tag 设置为 动态组件上面 is 属性
+  if (isDef(data) && isDef(data.is)) {
+    tag = data.is;
+  }
+  if (!tag) {
+    // in case of component :is set to falsy value
+    return createEmptyVNode()
+  }
+  // warn against non-primitive key
+  if (isDef(data) && isDef(data.key) && !isPrimitive(data.key)
+  ) {
+    {
+      warn(
+        'Avoid using non-primitive value as key, ' +
+        'use string/number value instead.',
+        context
+      );
+    }
+  }
+  // support single function children as default scoped slot
+  if (Array.isArray(children) &&
+    typeof children[0] === 'function'
+  ) {
+    data = data || {};
+    data.scopedSlots = { default: children[0] };
+    children.length = 0;
+  }
+  if (normalizationType === ALWAYS_NORMALIZE) {
+    children = normalizeChildren(children);
+  } else if (normalizationType === SIMPLE_NORMALIZE) {
+    children = simpleNormalizeChildren(children);
+  }
+  var vnode, ns;
+  if (typeof tag === 'string') {
+    var Ctor;
+    ns = (context.$vnode && context.$vnode.ns) || config.getTagNamespace(tag);
+    if (config.isReservedTag(tag)) {
+      // 如果是 HTML 的 tag
+      // platform built-in elements
+      vnode = new VNode(
+        config.parsePlatformTagName(tag), data, children,
+        undefined, undefined, context
+      );
+    } else if ((!data || !data.pre) && isDef(Ctor = resolveAsset(context.$options, 'components', tag))) {
+      // component
+      vnode = createComponent(Ctor, data, context, children, tag);
+    } else {
+      // unknown or unlisted namespaced elements
+      // check at runtime because it may get assigned a namespace when its
+      // parent normalizes children
+      vnode = new VNode(
+        tag, data, children,
+        undefined, undefined, context
+      );
+    }
+  } else {
+    // direct component options / constructor
+    vnode = createComponent(tag, data, context, children);
+  }
+  if (Array.isArray(vnode)) {
+    return vnode
+  } else if (isDef(vnode)) {
+    if (isDef(ns)) { applyNS(vnode, ns); }
+    if (isDef(data)) { registerDeepBindings(data); }
+    return vnode
+  } else {
+    return createEmptyVNode()
+  }
+}
+```
+
+2. `_v` 就是调用 Vue 上的 `createTextVNode` 创建文本节点的 vnode
+
+```javascript
+function createTextVNode (val) {
+  return new VNode(undefined, undefined, undefined, String(val))
+}
+```
+
+3. `_l` 就是调用 Vue 上的 `renderList` 循环创建元素节点
+
+```javascript
+function renderList (
+  val,
+  render
+) {
+  // val: []
+  // render: function (item) { return _c('div') }
+  var ret, i, l, keys, key;
+  if (Array.isArray(val) || typeof val === 'string') {
+    // 初始化一个 val 长度的 数组
+    ret = new Array(val.length);
+    // 循环生成 vnode [vnode, vnode]
+    for (i = 0, l = val.length; i < l; i++) {
+      ret[i] = render(val[i], i);
+    }
+  } else if (typeof val === 'number') {
+    ret = new Array(val);
+    for (i = 0; i < val; i++) {
+      ret[i] = render(i + 1, i);
+    }
+  } else if (isObject(val)) {
+    if (hasSymbol && val[Symbol.iterator]) {
+      ret = [];
+      var iterator = val[Symbol.iterator]();
+      var result = iterator.next();
+      while (!result.done) {
+        ret.push(render(result.value, ret.length));
+        result = iterator.next();
+      }
+    } else {
+      keys = Object.keys(val);
+      ret = new Array(keys.length);
+      for (i = 0, l = keys.length; i < l; i++) {
+        key = keys[i];
+        ret[i] = render(val[key], key, i);
+      }
+    }
+  }
+  if (!isDef(ret)) {
+    ret = [];
+  }
+  // 设置 ret 的 _isVList 为 true
+  (ret)._isVList = true;
+  return ret
+}
+```
+
+
