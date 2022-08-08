@@ -78,8 +78,60 @@ function createTextVNode (val) {
 
 ### 1.3 克隆节点
 
+克隆节点就是把一个已经存在的节点复制一份出来 是为了做模板编译优化时使用
 
+```javascript
+function cloneVNode (vnode) {
+  var cloned = new VNode(
+    vnode.tag,
+    vnode.data,
+    // #7975
+    // clone children array to avoid mutating original in case of cloning
+    // a child.
+    vnode.children && vnode.children.slice(),
+    vnode.text,
+    vnode.elm,
+    vnode.context,
+    vnode.componentOptions,
+    vnode.asyncFactory
+  );
+  cloned.ns = vnode.ns;
+  cloned.isStatic = vnode.isStatic;
+  cloned.key = vnode.key;
+  cloned.isComment = vnode.isComment;
+  cloned.fnContext = vnode.fnContext;
+  cloned.fnOptions = vnode.fnOptions;
+  cloned.fnScopeId = vnode.fnScopeId;
+  cloned.asyncMeta = vnode.asyncMeta;
+  cloned.isCloned = true;
+  return cloned
+}
+```
 
+从代码中可以看出 克隆节点就是将已有的节点属性全部复制到新节点中 `cloned` 然后将 `cloned` 的 `isCloned` 属性复制为 `true`
+
+### 1.4 元素节点
+
+元素节点就更接近页面上的真实ODM
+
+```javascript
+// 例如 这样的 vnode结构
+new Vnode('div', {id: 'app', on: 'handleClick', [vnode,vnode,...]})
+```
+
+### 1.5 组件节点
+
+组件节点除了元素节点的属性外 还有两个特有的属性
+
+1. componentOptions: 组件的options `data` `props` `methods` 等
+2. componentInstance： 当前组件节点对应的 Vue 实例
+
+### 1.6 函数式组件节点
+
+函数式组件对比组件节点 它又有两个特有的属性
+
+1. fnContext: 函数式组件对应的 Vue 实例
+2. fnOptions: 组件的 options 和组件节点的 componentOptions 一样
 
 ## 2. mounted
 
@@ -176,7 +228,7 @@ Watcher.prototype.get = function get () {
 };
 ```
 
-随后首先调用 `updateComponent` 方法里的 `vm._render()` 方法 这个方法最主要的目的就是 调用 `render` 函数拿到 `vnode` 也就是虚拟DOM
+随后首先调用 `updateComponent` 方法里的 `vm._render()` 方法 这个方法最主要的目的就是 调用 `render` 函数生成 `vnode` 也就是虚拟DOM
 
 ```javascript
 Vue.prototype._render = function () {
