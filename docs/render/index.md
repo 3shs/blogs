@@ -710,7 +710,6 @@ function createElm (
 
 
 
-
 // 创建子节点
 function createChildren (vnode, children, insertedVnodeQueue) {
   if (Array.isArray(children)) {
@@ -729,5 +728,176 @@ function createChildren (vnode, children, insertedVnodeQueue) {
 }
 ```
 
+上述代码看到了如果 vnode data 属性不为空 则调用 `invokeCreateHooks` 这个方法主要是在创建真实元素的时候提供一些钩子函数
+
+```javascript
+cbs.create = [
+  updateAttrs(oldVnode, vnode),
+  updateClass(oldVnode, vnode),
+  updateDOMListeners(oldVnode, vnode),
+  updateDOMProps(oldVnode, vnode),
+  updateStyle(oldVnode, vnode),
+  _enter(_, vnode),
+  create(_, vnode),
+  updateDirectives(oldVnode, vnode)
+]
 
 
+function invokeCreateHooks (vnode, insertedVnodeQueue) {
+  for (var i$1 = 0; i$1 < cbs.create.length; ++i$1) {
+    cbs.create[i$1](emptyNode, vnode);
+  }
+  i = vnode.data.hook; // Reuse variable
+  if (isDef(i)) {
+    if (isDef(i.create)) { i.create(emptyNode, vnode); }
+    if (isDef(i.insert)) { insertedVnodeQueue.push(vnode); }
+  }
+}
+```
+
+通过上述代码可以知道 在元素创建的时候 主要调用的 `cbs.create` 里面的钩子函数 同时在创建的时候传入的也是 `emptyNode` 来分别依次更新 元素上面的 属性 类名 事件 props 样式 transition动画 Ref 过滤器
+
+### 2.1 解析updateDOMListeners
+
+这个方法主要是用来注册和更新绑定在DOM上的事件
+
+```javascript
+function updateDOMListeners (oldVnode, vnode) {
+  // 如果 oldVnode 和 vnode 上面都没有 事件 直接 return
+  if (isUndef(oldVnode.data.on) && isUndef(vnode.data.on)) {
+    return
+  }
+  // 拿到新的事件对象 如果没有 则取空对象
+  var on = vnode.data.on || {};
+  // 拿到旧的事件对象 如果没有 则取空对象
+  var oldOn = oldVnode.data.on || {};
+  // 拿到 vnode上面的 真实元素
+  target$1 = vnode.elm;
+  normalizeEvents(on);
+  updateListeners(on, oldOn, add$1, remove$2, createOnceHandler$1, vnode.context);
+  target$1 = undefined;
+}
+
+function add$1 (
+  name,
+  handler,
+  capture,
+  passive
+) {
+  // async edge case #6566: inner click event triggers patch, event handler
+  // attached to outer element during patch, and triggered again. This
+  // happens because browsers fire microtask ticks between event propagation.
+  // the solution is simple: we save the timestamp when a handler is attached,
+  // and the handler would only fire if the event passed to it was fired
+  // AFTER it was attached.
+  if (useMicrotaskFix) {
+    var attachedTimestamp = currentFlushTimestamp;
+    var original = handler;
+    handler = original._wrapper = function (e) {
+      if (
+        // no bubbling, should always fire.
+        // this is just a safety net in case event.timeStamp is unreliable in
+        // certain weird environments...
+        e.target === e.currentTarget ||
+        // event is fired after handler attachment
+        e.timeStamp >= attachedTimestamp ||
+        // bail for environments that have buggy event.timeStamp implementations
+        // #9462 iOS 9 bug: event.timeStamp is 0 after history.pushState
+        // #9681 QtWebEngine event.timeStamp is negative value
+        e.timeStamp <= 0 ||
+        // #9448 bail if event is fired in another document in a multi-page
+        // electron/nw.js app, since event.timeStamp will be using a different
+        // starting reference
+        e.target.ownerDocument !== document
+      ) {
+        return original.apply(this, arguments)
+      }
+    };
+  }
+  target$1.addEventListener(
+    name,
+    handler,
+    supportsPassive
+      ? { capture: capture, passive: passive }
+      : capture
+  );
+}
+
+function updateListeners (
+  on,
+  oldOn,
+  add,
+  remove$$1,
+  createOnceHandler,
+  vm
+) {
+  var name, def$$1, cur, old, event;
+  // 循环 on 对象 所有的事件
+  for (name in on) {
+    // 拿到 新的事件
+    def$$1 = cur = on[name];
+    // 拿到 旧的事件
+    old = oldOn[name];
+    /**
+     *  这里得到的 event
+     * event: {
+     *  name: 'click', 
+     *  capture: false,
+     *  once: false,
+     *  passive: false
+     * }
+     * 
+     **/
+    event = normalizeEvent(name);
+    if (isUndef(cur)) {
+      warn(
+        "Invalid handler for event \"" + (event.name) + "\": got " + String(cur),
+        vm
+      );
+    } else if (isUndef(old)) {
+      // 如果没有旧数据并且新事件上面没有 fns
+      if (isUndef(cur.fns)) {
+        // 创建 invoker 函数 赋值给 on[name] 和 cur
+        cur = on[name] = createFnInvoker(cur, vm);
+      }
+      if (isTrue(event.once)) {
+        cur = on[name] = createOnceHandler(event.name, cur, event.capture);
+      }
+      add(event.name, cur, event.capture, event.passive, event.params);
+    } else if (cur !== old) {
+      old.fns = cur;
+      on[name] = old;
+    }
+  }
+  for (name in oldOn) {
+    if (isUndef(on[name])) {
+      event = normalizeEvent(name);
+      remove$$1(event.name, oldOn[name], event.capture);
+    }
+  }
+}
+
+
+// 创建一个 invoker 函数 return 出去
+function createFnInvoker (fns, vm) {
+  // 定义 invoker 函数
+  function invoker () {
+    var arguments$1 = arguments;
+
+    var fns = invoker.fns;
+    if (Array.isArray(fns)) {
+      var cloned = fns.slice();
+      for (var i = 0; i < cloned.length; i++) {
+        invokeWithErrorHandling(cloned[i], null, arguments$1, vm, "v-on handler");
+      }
+    } else {
+      // return handler return value for single handlers
+      return invokeWithErrorHandling(fns, null, arguments, vm, "v-on handler")
+    }
+  }
+  // 将我们定义的事件  例如 handleClick 赋值给 invoker的fns
+  invoker.fns = fns;
+  // 返回 invoker 函数
+  return invoker
+}
+```
