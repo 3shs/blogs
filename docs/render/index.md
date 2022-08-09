@@ -774,54 +774,12 @@ function updateDOMListeners (oldVnode, vnode) {
   // 拿到 vnode上面的 真实元素
   target$1 = vnode.elm;
   normalizeEvents(on);
+  // 这个方法 主要就是绑定事件和移除事件
   updateListeners(on, oldOn, add$1, remove$2, createOnceHandler$1, vnode.context);
+  // 更新完成 真实元素 赋值为 undefined
   target$1 = undefined;
 }
 
-function add$1 (
-  name,
-  handler,
-  capture,
-  passive
-) {
-  // async edge case #6566: inner click event triggers patch, event handler
-  // attached to outer element during patch, and triggered again. This
-  // happens because browsers fire microtask ticks between event propagation.
-  // the solution is simple: we save the timestamp when a handler is attached,
-  // and the handler would only fire if the event passed to it was fired
-  // AFTER it was attached.
-  if (useMicrotaskFix) {
-    var attachedTimestamp = currentFlushTimestamp;
-    var original = handler;
-    handler = original._wrapper = function (e) {
-      if (
-        // no bubbling, should always fire.
-        // this is just a safety net in case event.timeStamp is unreliable in
-        // certain weird environments...
-        e.target === e.currentTarget ||
-        // event is fired after handler attachment
-        e.timeStamp >= attachedTimestamp ||
-        // bail for environments that have buggy event.timeStamp implementations
-        // #9462 iOS 9 bug: event.timeStamp is 0 after history.pushState
-        // #9681 QtWebEngine event.timeStamp is negative value
-        e.timeStamp <= 0 ||
-        // #9448 bail if event is fired in another document in a multi-page
-        // electron/nw.js app, since event.timeStamp will be using a different
-        // starting reference
-        e.target.ownerDocument !== document
-      ) {
-        return original.apply(this, arguments)
-      }
-    };
-  }
-  target$1.addEventListener(
-    name,
-    handler,
-    supportsPassive
-      ? { capture: capture, passive: passive }
-      : capture
-  );
-}
 
 function updateListeners (
   on,
@@ -860,18 +818,23 @@ function updateListeners (
         // 创建 invoker 函数 赋值给 on[name] 和 cur
         cur = on[name] = createFnInvoker(cur, vm);
       }
+      // 这里是处理 $once 
       if (isTrue(event.once)) {
         cur = on[name] = createOnceHandler(event.name, cur, event.capture);
       }
+      // 调用传入进来的 add$1
       add(event.name, cur, event.capture, event.passive, event.params);
     } else if (cur !== old) {
       old.fns = cur;
       on[name] = old;
     }
   }
+  // 遍历 旧数据上面的 事件
   for (name in oldOn) {
+    // 如果在新数据上面没有这个事件
     if (isUndef(on[name])) {
       event = normalizeEvent(name);
+      // 则移除这个事件
       remove$$1(event.name, oldOn[name], event.capture);
     }
   }
@@ -900,4 +863,65 @@ function createFnInvoker (fns, vm) {
   // 返回 invoker 函数
   return invoker
 }
+
+/**
+ *  这个方法主要是绑定dom上的事件
+ *  name: 事件的名称
+ *  handler: 之前处理的 invoker 函数
+ *  capture
+ *  passive
+ * **/
+function add$1 (
+  name,
+  handler,
+  capture,
+  passive
+) {
+  // async edge case #6566: inner click event triggers patch, event handler
+  // attached to outer element during patch, and triggered again. This
+  // happens because browsers fire microtask ticks between event propagation.
+  // the solution is simple: we save the timestamp when a handler is attached,
+  // and the handler would only fire if the event passed to it was fired
+  // AFTER it was attached.
+  if (useMicrotaskFix) {
+    var attachedTimestamp = currentFlushTimestamp;
+    // 将 之前的 invoker 函数 赋值给 original
+    var original = handler;
+    // 在 invoker 上面再 挂载 一个 _wrapper 函数 
+    // 然后将这个函数重新赋值给 handler
+    // 因此经过 Vue 的处理 最后绑定的就是 下面这个函数
+    handler = original._wrapper = function (e) {
+      if (
+        // no bubbling, should always fire.
+        // this is just a safety net in case event.timeStamp is unreliable in
+        // certain weird environments...
+        e.target === e.currentTarget ||
+        // event is fired after handler attachment
+        e.timeStamp >= attachedTimestamp ||
+        // bail for environments that have buggy event.timeStamp implementations
+        // #9462 iOS 9 bug: event.timeStamp is 0 after history.pushState
+        // #9681 QtWebEngine event.timeStamp is negative value
+        e.timeStamp <= 0 ||
+        // #9448 bail if event is fired in another document in a multi-page
+        // electron/nw.js app, since event.timeStamp will be using a different
+        // starting reference
+        e.target.ownerDocument !== document
+      ) {
+        // 最后我们做点击事件的事件的时候 其实调用的 就是 invoker 函数
+        // 然后再 invoker 里进行处理
+        return original.apply(this, arguments)
+      }
+    };
+  }
+  // 绑定dom事件
+  target$1.addEventListener(
+    name,
+    handler,
+    supportsPassive
+      ? { capture: capture, passive: passive }
+      : capture
+  );
+}
 ```
+
+// TODO 调用之后如何处理
