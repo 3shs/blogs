@@ -18,6 +18,7 @@ module.exports = {
           ['complie/', '模板解析'],
           ['genRender/', '生成render函数'],
           ['render/', '挂载渲染阶段'],
+          ['update/', '更新阶段'],
         ]
       },
       {

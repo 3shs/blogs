@@ -813,7 +813,8 @@ function updateListeners (
         vm
       );
     } else if (isUndef(old)) {
-      // 如果没有旧数据并且新事件上面没有 fns
+      // 如果没有旧事件
+      // 并且新事件上面没有 fns
       if (isUndef(cur.fns)) {
         // 创建 invoker 函数 赋值给 on[name] 和 cur
         cur = on[name] = createFnInvoker(cur, vm);
@@ -842,18 +843,25 @@ function updateListeners (
 
 
 // 创建一个 invoker 函数 return 出去
+// 经过 Vue 处理 我们触发的事件 就是这里面的 invoker 函数 
 function createFnInvoker (fns, vm) {
   // 定义 invoker 函数
   function invoker () {
+    // 原生事件 arguments 指的是事件对象
     var arguments$1 = arguments;
-
+    // 拿到真正经过处理的 我们写在dom上的事件
+    // 在之前经过 genData$2 函数的处理 最终我们所写的 例如 :
+    // 有参数：@click="handleClick('1')" => {on: {"click": function($event) { return handleClick('1') } }}
+    // 无参数：@click="handleClick" => {on: {"click": handleClick }}
     var fns = invoker.fns;
+    // 如果 fns 为数组 则循环调用
     if (Array.isArray(fns)) {
       var cloned = fns.slice();
       for (var i = 0; i < cloned.length; i++) {
         invokeWithErrorHandling(cloned[i], null, arguments$1, vm, "v-on handler");
       }
     } else {
+      // 直接调用
       // return handler return value for single handlers
       return invokeWithErrorHandling(fns, null, arguments, vm, "v-on handler")
     }
@@ -862,6 +870,32 @@ function createFnInvoker (fns, vm) {
   invoker.fns = fns;
   // 返回 invoker 函数
   return invoker
+}
+
+
+
+// 这个方法主要就是用来触发 我们定义在 methods 里面的方法
+function invokeWithErrorHandling (
+  handler,
+  context,
+  args,
+  vm,
+  info
+) {
+  var res;
+  try {
+    // 判断是否有参数 然后进行调用
+    res = args ? handler.apply(context, args) : handler.call(context);
+    if (res && !res._isVue && isPromise(res) && !res._handled) {
+      res.catch(function (e) { return handleError(e, vm, info + " (Promise/async)"); });
+      // issue #9511
+      // avoid catch triggering multiple times when nested calls
+      res._handled = true;
+    }
+  } catch (e) {
+    handleError(e, vm, info);
+  }
+  return res
 }
 
 /**
@@ -909,6 +943,7 @@ function add$1 (
       ) {
         // 最后我们做点击事件的事件的时候 其实调用的 就是 invoker 函数
         // 然后再 invoker 里进行处理
+        // 这里的 arguments是指 事件对象 e
         return original.apply(this, arguments)
       }
     };
@@ -924,4 +959,4 @@ function add$1 (
 }
 ```
 
-// TODO 调用之后如何处理
+综上代码就是原生事件绑定及其调用的原理 当然 Vue 不仅有原生事件 还有自定义事件 用于父子组件传递参数 这种自定义事件在组件生成的时候会进行分析
