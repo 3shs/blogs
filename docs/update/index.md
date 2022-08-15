@@ -18,7 +18,13 @@ Vue对页面的更新 是通过 `patch` 的方式来完成的 就是通过 `Diff
 
   * 如果 `oldVnode` 和 `vnode` 都有子节点 则直接 调用 `updateChildren` 方法去更新子节点（Diff）算法
 
-  * 
+  * 如果只有 `vnode` 中有子节点 判断 `oldVnode` 里面是否有文本 如果有则清空并且将 `vnode` 的子节点直接添加到DOM中 如果没有 则直接 将 `vnode` 的子节点直接添加到DOM中
+
+  * 如果只有 `oldVnode` 中有子节点 则清空 DOM 中的子节点
+
+  * 如果 `oldVnode` 和 `vnode` 的 都没有子节点 判断如果 `oldVnode` 中有 文本 则清空 `oldVnode` 中的文本
+
+* 如果 `vnode` 有 `text` 属性 判断 `oldVnode` 和 `vnode` 的 `text` 是否一样 如果不一定 就用 `vnode` 的text 替换真实DOM中的文本
 
 ```javascript
 function patchVnode (
