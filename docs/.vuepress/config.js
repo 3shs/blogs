@@ -19,6 +19,7 @@ module.exports = {
           ['genRender/', '生成render函数'],
           ['render/', '挂载渲染阶段'],
           ['update/', '更新阶段'],
+          ['component/', '组件分析'],
         ]
       },
       {
