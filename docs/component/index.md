@@ -18,7 +18,13 @@ title: 组件分析
 
 如果是组件的话 调用 `resolveAsset` 取出我们写在 组件里的 `options` 赋值给 Ctor 这个 options 其实就是我们写在组件内的 `{ data() {}, props: {}, methods: {} }` 这些配置
 
-然后去调用 `createComponent` 方法去 创建 vnode
+然后去调用 `createComponent` 方法去 创建 vnode 这个方法 主要有三大部分
+
+1. 构造子类的构造函数即构造组件的构造函数
+
+2. 安装组件的钩子函数
+
+3. 生成组件的 vnode
 
 ```javascript
 function _createElement (
@@ -104,11 +110,9 @@ function _createElement (
     return createEmptyVNode()
   }
 }
+```
 
-
-
-
-
+```javascript
 function createComponent (
   Ctor,
   data,
@@ -121,10 +125,13 @@ function createComponent (
     return
   }
 
+  // 取出 context.$options._base 其实就是 Vue
   var baseCtor = context.$options._base;
 
   // plain options object: turn it into a constructor
+  // 如果写在 组件上的 option 是个对象
   if (isObject(Ctor)) {
+    // 其实就是调用 Vue 上面的 extend 方法 将其 转成一个构造函数
     Ctor = baseCtor.extend(Ctor);
   }
 
@@ -208,4 +215,89 @@ function createComponent (
 
   return vnode
 }
+```
+
+```javascript
+Vue.extend = function (extendOptions) {
+  // 写在 组件里面的 options
+  extendOptions = extendOptions || {};
+  // this 其实就是 Vue 因为上面代码是 Vue 进行调用的
+  var Super = this;
+  // 取出 cid
+  var SuperId = Super.cid;
+  // extendOptions上面的 _Ctor 上有值 就去对应的值 没有 赋予 {}
+  var cachedCtors = extendOptions._Ctor || (extendOptions._Ctor = {});
+
+  // 如果 cachedCtors 上有 SuperId 直接返回对应的数据
+  if (cachedCtors[SuperId]) {
+    return cachedCtors[SuperId]
+  }
+
+  var name = extendOptions.name || Super.options.name;
+  if (name) {
+    validateComponentName(name);
+  }
+
+  // 将 构造函数 VueComponent 赋值给 Sub
+  var Sub = function VueComponent (options) {
+    this._init(options);
+  };
+  // 将 构造函数 Vue 赋值给 构造函数 Sub 的原型对象 
+  // 其实 这行代码 就相当于 Sub.prototype = new Vue()
+  Sub.prototype = Object.create(Super.prototype);
+  // 将实实例对象 指向 构造函数
+  // 其实这里就是最标准的 原型继承
+  Sub.prototype.constructor = Sub;
+  // 赋值 Sub 的 cid
+  Sub.cid = cid++;
+  // 合并 Vue 上自定义的 options 和 写在组件内的options 赋值给 Sub.options
+  Sub.options = mergeOptions(
+    Super.options,
+    extendOptions
+  );
+  // 赋值 Sub 的 super
+  Sub['super'] = Super;
+
+  // For props and computed properties, we define the proxy getters on
+  // the Vue instances at extension time, on the extended prototype. This
+  // avoids Object.defineProperty calls for each instance created.
+  if (Sub.options.props) {
+    initProps$1(Sub);
+  }
+  if (Sub.options.computed) {
+    initComputed$1(Sub);
+  }
+
+  // allow further extension/mixin/plugin usage
+  // 做一些赋值工作
+  Sub.extend = Super.extend;
+  Sub.mixin = Super.mixin;
+  Sub.use = Super.use;
+
+  // create asset registers, so extended classes
+  // can have their private assets too.
+  // ASSET_TYPES: [''component, 'directive', 'filter']
+  ASSET_TYPES.forEach(function (type) {
+    Sub[type] = Super[type];
+  });
+  // enable recursive self-lookup
+  // 如果组件有配置中有 name 属性
+  if (name) {
+    Sub.options.components[name] = Sub;
+  }
+
+  // keep a reference to the super options at extension time.
+  // later at instantiation we can check if Super's options have
+  // been updated.
+  Sub.superOptions = Super.options;
+  Sub.extendOptions = extendOptions;
+  // 将 Sub.options 合并到 {}
+  Sub.sealedOptions = extend({}, Sub.options);
+
+  // cache constructor
+  // 缓存 构造函数
+  cachedCtors[SuperId] = Sub;
+  // 返回构造函数
+  return Sub
+};
 ```
