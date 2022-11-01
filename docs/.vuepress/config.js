@@ -28,6 +28,14 @@ module.exports = {
         children: [
 
         ]
+      },
+      {
+        title: '性能相关',
+        collapsable: false,
+        children: [
+          ['virtualScroll/', '虚拟滚动'],
+          ['cacheApi/', '接口缓存']
+        ]
       }
     ]
   }
