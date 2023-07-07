@@ -26,6 +26,7 @@ module.exports = {
         title: 'Webpack相关知识',
         collapsable: false,
         children: [
+          ['webpack/entry/', '入口'],
           ['webpack/optimization/', '优化'],
         ]
       },
@@ -35,6 +36,14 @@ module.exports = {
         children: [
           ['performance/virtualScroll/', '虚拟滚动'],
           ['performance/cacheApi/', '接口缓存']
+        ]
+      },
+      {
+        title: '问题记录',
+        collapsable: false,
+        children: [
+          ['workRecord/vue/', 'vue相关'],
+          ['workRecord/miniprogram/', '小程序相关']
         ]
       }
     ]
