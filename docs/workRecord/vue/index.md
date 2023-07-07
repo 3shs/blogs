@@ -28,7 +28,7 @@ title: vue相关
 
 ```html
 <el-input
-    :maxLength=3
+    :maxLength="3"
     oninput="value=value.replace(/^0|[^\d]/g,'')">
 </el-input>
 ```
