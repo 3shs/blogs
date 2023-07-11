@@ -6,7 +6,7 @@ title: uni/小程序相关
 
 ```js
 uni.getImageInfo({
-  src: 'https://oss.datianpao.com/wechat/map_bg.png',
+  src: 'https://oss.example.com/wechat/map_bg.png',
   success(res) {
     console.log(res.path)
   }
@@ -81,10 +81,6 @@ draw(points) {
   const phoneInfo = uni.getStorageSync('phone_info') || {}
 
   query.selectAll('.map-container').boundingClientRect(rect => {
-
-    console.log('rect1111111111111111', rect)
-
-
 
     // 绘制图标
     if (this.isLandScape) {

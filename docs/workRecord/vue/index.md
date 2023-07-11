@@ -12,13 +12,13 @@ title: vue相关
     :key="index">
     <div class="msg-card"></div>
     <el-form-item 
-        label="推送对象" 
-        :prop="`pushList.${index}.receiveObj`"
-        :rules="{ required: true, message: '推送对象不能为空', trigger: 'change' }">
+        label="对象" 
+        :prop="`pushList.${index}.obj`"
+        :rules="{ required: true, message: '对象不能为空', trigger: 'change' }">
         <el-radio-group 
-            v-model="ele.receiveObj">
-            <el-radio :label="1">客户</el-radio>
-            <el-radio :label="0">员工</el-radio>
+            v-model="ele.obj">
+            <el-radio :label="1">对象1</el-radio>
+            <el-radio :label="0">对象2</el-radio>
         </el-radio-group> 
     </el-form-item>
 </div>
