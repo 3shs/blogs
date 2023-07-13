@@ -302,3 +302,63 @@ const searchOrderStatus = (orderNo, isNopayOrder) => {
 ```
 
 ## 6. 文件上传到OSS 不需要后端情况
+
+## 7. 利用后端返回的数据绘制多边形
+
+```js
+/**
+ * 示例代码数据格式 实际的米数
+ * [
+ *  {
+ *      polygonData: "72.10,17.30|72.10,12.80|76.30,12.80|76.20,17.30|72.10,17.30"
+ *  },
+ * {
+ *      polygonData: "76.40,22.20|76.40,18.80|81.80,18.80|81.80,22.20|76.40,22.20"
+ * }
+ * ]
+ */
+draw(polygons) {
+    const ctx = uni.createCanvasContext('map')
+    
+    polygons.forEach(polygon => {
+        const points = polygon.polygonData.split('|').map(point => {
+            const [x, y] = point.split(',')
+            return {x, y}
+        })
+
+        ctx.beginPath()
+        ctx.moveTo(...this.targetPoinit([points[0].y, points[0].x]))
+        points.forEach(point => {
+            ctx.lineTo(...this.targetPoinit([point.y, point.x])) 
+        })
+
+        ctx.closePath()
+
+        // 根据不同的区域绘制不同多边形的填充颜色
+        if (polygon.areaName === 'xx' || polygon.areaName === 'yy') {
+            ctx.fillStyle = '#FFFAFA'
+        } else if (polygon.areaName === 'zz') {
+            ctx.fillStyle = '#DFECFF'
+        } else if (polygon.areaName === 'vv') {
+            ctx.fillStyle = '#E8F3E4'
+        } else {
+            ctx.fillStyle = '#FDEBEB'
+        }
+        ctx.fill()
+
+    })
+    
+    ctx.draw()
+
+},
+/**
+ * 41.6 实际的米数 370屏幕的宽度
+ * 100 实际的米数 700屏幕的高度
+ */
+targetPoinit([x, y]) {
+    return [
+        (x * 370) / 41.6,
+        (y * 700) / 100
+    ]
+},
+```
