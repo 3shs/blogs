@@ -318,8 +318,13 @@ const searchOrderStatus = (orderNo, isNopayOrder) => {
  * ]
  */
 draw(polygons) {
+
     const ctx = uni.createCanvasContext('map')
-    
+    let minx, miny
+    let maxx, maxy
+
+    let cx,cy
+
     polygons.forEach(polygon => {
         const points = polygon.polygonData.split('|').map(point => {
             const [x, y] = point.split(',')
@@ -330,24 +335,54 @@ draw(polygons) {
         ctx.moveTo(...this.targetPoinit([points[0].y, points[0].x]))
         points.forEach(point => {
             ctx.lineTo(...this.targetPoinit([point.y, point.x])) 
+
         })
+        const targetX = points.map(p => p.x)
+        const targetY = points.map(p => p.y)
+
+        // 获取一个多边形最小的y点位和最大的y点位
+        minx = Math.min.apply(null, targetX)
+        maxx = Math.max.apply(null, targetX)
+
+        // 获取一个多边形最小的x点位和最大的x点位
+        miny = Math.min.apply(null, targetY)
+        maxy = Math.max.apply(null, targetY)
+        
+        // 取个中间值将字体放在中间
+        cx = (minx + maxx) / 2
+        cy = (miny + maxy) / 2
+        
 
         ctx.closePath()
 
-        // 根据不同的区域绘制不同多边形的填充颜色
-        if (polygon.areaName === 'xx' || polygon.areaName === 'yy') {
+        if (polygon.areaName === 'xx') {
             ctx.fillStyle = '#FFFAFA'
-        } else if (polygon.areaName === 'zz') {
+        } else if (polygon.areaName === 'yy') {
             ctx.fillStyle = '#DFECFF'
-        } else if (polygon.areaName === 'vv') {
+        } else if (polygon.areaName === 'zz' || polygon.areaName === 'vv') {
             ctx.fillStyle = '#E8F3E4'
         } else {
             ctx.fillStyle = '#FDEBEB'
         }
         ctx.fill()
 
+
+        // 保存状态
+        ctx.save() 
+
+        // 设置文字样式
+        ctx.setFontSize(12)
+        ctx.setFillStyle('#6D5F5F')
+
+        ctx.setTextAlign('center')
+
+        // 绘制文字
+        ctx.fillText(polygon.areaName, ...this.targetPoinit([cy.toFixed(2), cx.toFixed(2)]))
+
+        // 恢复剪切区域 
+        ctx.restore()
+
     })
-    
     ctx.draw()
 
 },
