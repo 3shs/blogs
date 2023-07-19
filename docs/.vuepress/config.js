@@ -20,6 +20,7 @@ module.exports = {
           ['vue/render/', '挂载渲染阶段'],
           ['vue/update/', '更新阶段'],
           ['vue/component/', '组件分析'],
+          ['vue/lifeCycle/', '生命周期'],
         ]
       },
       {
@@ -42,7 +43,8 @@ module.exports = {
         collapsable: false,
         children: [
           ['performance/virtualScroll/', '虚拟滚动'],
-          ['performance/cacheApi/', '接口缓存']
+          ['performance/cacheApi/', '接口缓存'],
+          ['performance/debounce&throttle/', '防抖与节流'],
         ]
       },
       {
