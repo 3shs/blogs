@@ -42,7 +42,7 @@ module.exports = {
         title: '网络相关知识',
         collapsable: false,
         children: [
-          ['http/http&https/', 'http&https'],
+          ['net/http&https/', 'http&https'],
         ]
       },
       {

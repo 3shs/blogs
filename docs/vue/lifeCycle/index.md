@@ -46,16 +46,21 @@ title: 生命周期
 * 这个方法可 update diff 算法 可第一次渲染 利用 vnde tag 的值 创建真实的 dom 挂在到 vnode ele 上 然后递归创建 最后插入到 页面中 然后删除我们原始的模板
 * 然后 callHoock 我们写在组件里面的 mounted 这个钩子函数 当这个钩子函数执行的时候 所有真实的dom都插入到页面中的 这是我们能获取到页面上真实的dom
 
+### beforeUpdate 钩子执行之前阶段工作
 
 * 更新阶段
 * 如果数据更新 利用dep.notify() 通知修改 然后找到对应的 watcher
 * 调用一下 watcher 上面 before 方法 这个方法 主要用来 callHook 我们写在组件里面 beforeUpdate 这个钩子函数 当执行到这个函数说明 马上就要进行数据更新 说明这时候的数据还是之前的数据
+
+### updated 钩子执行之前阶段工作
+
 * 然后重新调用 _render 函数 调用我们生成的 render 函数 重新生成一份 vnode
 * 然后一样调用 _update 这个方法 来进行更新 主要是diff算法 双指针的方式
 * 然后一个数据被多初地方用到 一定是先触发 子组件里的 update 钩子函数 然后向外 直到所有的 watcher 都被处理 意思就是 只要运用这个数据被改变了 那这个组件的 updated 钩子函数就会被触发
 * 当这个钩子函数执行的时候 就说明 我们可以得到最新的 数据了 
-*  
-* 
+
+### 更新数据的主要逻辑
+
 * 主要逻辑 notify 通知修改
 * 重新调用 _render 函数 生成虚拟dom 
 * 然后 通过 update 方法 diff 算法 
@@ -71,9 +76,9 @@ title: 生命周期
 * 
 * new Watcher 将 render 函数传进去  render 对应 Wacther 调用 watcher 的 get 方法其实就是 调用 render 
 * 这是将 Dep.target = this(对应这个Watcher)  dep.depend 就将这个 watcher 收集进去
-* 
-* 
-* slot 解析 先解析 父组件么 
+
+### slot 解析 先解析 父组件么？
+
 * 当解析到父组件的 slot=header 就给 ast 加上 slotTarget 属性 el.slotTarget = "header"
 * 然后在生成 render 函数的处理 el.slotTarget
 * 生成例如 _c('div', {attr: "slot": "header"}, slot: "header")
