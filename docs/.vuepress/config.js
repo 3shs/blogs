@@ -12,6 +12,13 @@ module.exports = {
     searchMaxSuggestions: 10,
     sidebar: [
       {
+        title: 'JavaScript相关知识',
+        collapsable: false,
+        children: [
+          ['javascript/promise/', 'Promise'],
+        ]
+      },
+      {
         title: 'Vue相关知识',
         collapsable: false,
         children: [
