@@ -397,3 +397,30 @@ targetPoinit([x, y]) {
     ]
 },
 ```
+
+## 8. 后台配置用百度地图获取目的地经纬度 uni 定位到这个位置不准
+
+```js
+/**
+ * 目的地经纬度
+ */
+let {
+    latitude,
+    longitude,
+} = this.position
+
+let x_pi = 3.14159265358979324 * 3000.0 / 180.0
+let x = longitude - 0.0065
+let y = latitude - 0.006
+let z = Math.sqrt(x * x + y * y) - 0.00002 * Math.sin(y * x_pi)
+let wz = Math.atan2(y, x) - 0.000003 * Math.cos(x * x_pi)
+let lon = z * Math.cos(wz)
+let lat = z * Math.sin(wz)
+longitude = lon
+latitude = lat
+uni.openLocation({
+    latitude,
+    longitude,
+    name: storeName,
+})
+```
