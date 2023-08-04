@@ -71,3 +71,40 @@ const removeDuplicates = (firstArr: arr, secondArr: arr, generateKey: function) 
   return uniqueArray
 }
 ```
+
+## 4. vue/cli@4.x 编写一个loader
+
+```js
+/**
+ * 生产环境去除 console.log
+ * 
+ * src/loader/clearConsole
+ */
+
+module.exports = function (source) {
+  return source.replace(/console\.log\(.*\);?/g, '')
+}
+
+config.when(process.env.NODE_ENV !== 'development', config => {
+  config.module
+    .rule('clear-console-js')
+    .test(/\.js$/)
+    .exclude
+      .add(path.resolve(__dirname, 'node_modules'))
+      .end()
+    .use('clear-console-js')
+    .loader('./src/loader/clearConsole')
+    .end()
+
+
+    config.module
+    .rule('clear-console-vue')
+    .test(/\.vue$/)
+    .exclude
+      .add(path.resolve(__dirname, 'node_modules'))
+      .end()
+    .use('clear-console-vue')
+    .loader('./src/loader/clearConsole')
+    .end()
+})
+```

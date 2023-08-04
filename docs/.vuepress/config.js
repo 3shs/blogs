@@ -44,6 +44,7 @@ module.exports = {
         children: [
           ['net/http&https/', 'http&https'],
           ['net/https/', 'https'],
+          ['net/udp&tcp/', 'udp&tcp'],
         ]
       },
       {
