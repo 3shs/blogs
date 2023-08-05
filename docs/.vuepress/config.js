@@ -42,9 +42,10 @@ module.exports = {
         title: '网络相关知识',
         collapsable: false,
         children: [
-          ['net/http&https/', 'http&https'],
-          ['net/https/', 'https'],
-          ['net/udp&tcp/', 'udp&tcp'],
+          ['net/http&https/', 'HTTP&HTTPS'],
+          ['net/https/', 'HTTPS'],
+          ['net/udp&tcp/', 'UDP&TCP'],
+          ['net/tcp&&ip/', 'TCP/IP'],
         ]
       },
       {
