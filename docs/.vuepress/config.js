@@ -46,6 +46,7 @@ module.exports = {
           ['net/https/', 'HTTPS'],
           ['net/udp&tcp/', 'UDP&TCP'],
           ['net/tcp&&ip/', 'TCP/IP'],
+          ['net/dns/', 'DNS'],
         ]
       },
       {
