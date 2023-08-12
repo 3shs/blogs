@@ -108,3 +108,87 @@ config.when(process.env.NODE_ENV !== 'development', config => {
     .end()
 })
 ```
+
+## 5. 前端发布/本地脚本
+
+- 因为需要一次性发布到三个服务器 每次finalshell拖上去很麻烦 所以编写一个脚本
+- 前提需要安装一个 zx `npm install -g zx` 方便 windows 使用 linux 可以忽略
+- package.json 配置 ` "type": "module" ` 更友好的使用 zx
+- .js 改成 .mjs
+```js
+// build.js
+#! /usr/bin/env zx
+
+cd('./../project')
+await $`npm run build:prod`
+await $`tar zcvf dist.tar.gz dist`
+```
+```js
+import { exec } from 'node:child_process'
+import { Client } from 'ssh2'
+const pro = exec('zx ./build.mjs', {}, (err, stdout, stderr) => {})
+pro.stdout.pipe(process.stdout)
+// 多服务器发布需要定义一个数组 单个服务器直接在 connect() 里面写就好了
+const services = [
+    {
+        host: 'host1',
+        password: 'password1'
+    },
+    {
+        host: 'host2',
+        password: 'password2'
+    },
+    {
+        host: 'host3',
+        password: 'password3'
+    },
+]
+pro.on('exit', () => {
+    for (let i = 0; i < services.length; i++) {
+        const service = services[i]
+        link(service)
+    }
+})
+function link({ host, password }) {
+    const client = new Client()
+    client.on('ready', () => {
+        client.sftp((err, sftp) => {
+          /**
+           * 第一个参数 本地目录
+           * 第二个参数 服务器目录
+           */
+            sftp.fastPut('./../project/dist.tar.gz', '/home/xiaohuanghua/html/dist.tar.gz', {}, (err, result) => {
+                finish(client)
+            })
+        })
+    }).connect({
+        host,
+        port: '22',
+        username: 'root',
+        password
+    })
+}
+/**
+ * 上传过后 进入目标服务器
+ * 解压 删除压缩包
+ * 移动dist文件夹到目标目录
+ */
+function finish(client) {
+    client.shell((err, stream) => {
+        stream.end(`
+            cd /home/xiaohuanghua/html
+            tar zxvf dist.tar.gz
+            rm -rf dist.tar.gz
+            rm -rf front/*
+            mv dist/* /home/xiaohuanghua/html/front
+            rm -rf dist/
+            exit
+        `).on('data', data => {
+            console.log('data', data.toString())
+        }).on('close', () => {
+            client.end()
+            console.log('link-close')
+        })
+    })
+}
+```
