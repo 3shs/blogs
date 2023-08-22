@@ -21,3 +21,4 @@ git push -f git@github.com:3shs/3shs.github.io.git master
 # git push -f git@github.com:<USERNAME>/<REPO>.git master:gh-pages
 
 cd -
+# source /usr/local/opt/nvm/nvm.sh
